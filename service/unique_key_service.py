@@ -11,7 +11,8 @@ mongo = None  # Global variable for MongoDB
 def init_mongo(app):
     """Initialize MongoDB connection with Flask app."""
     global mongo
-    mongo = PyMongo(app)  # ✅ Initialize MongoDB with Flask app
+    if mongo is None:  # ✅ Ensure MongoDB is only initialized once
+        mongo = PyMongo(app)
 
 def generate_unique_key():
     """Generate a random 10-digit unique key."""
@@ -20,9 +21,9 @@ def generate_unique_key():
 @key_blueprint.route('/generate_key', methods=['POST'])
 def generate_key():
     """Generate and store a 10-digit key for a user upon login."""
-    global mongo  # ✅ Ensure `mongo` is being accessed properly
+    global mongo  
 
-    if mongo is None:  # ✅ Ensure MongoDB is initialized
+    if mongo is None:  
         return jsonify({"message": "Database not initialized"}), 500
 
     data = request.get_json()
@@ -32,7 +33,7 @@ def generate_key():
         return jsonify({"message": "Email is required"}), 400
 
     unique_key = generate_unique_key()
-    hashed_key = generate_password_hash(unique_key)  # ✅ Hash the unique key
+    hashed_key = generate_password_hash(unique_key)
 
     try:
         mongo.db.users.update_one(

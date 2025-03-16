@@ -1,3 +1,4 @@
-# Example Configuration
+import os
+
 DEBUG = True
-MONGO_URI = "mongodb://localhost:27017/UserAuth"
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/UserAuth")
