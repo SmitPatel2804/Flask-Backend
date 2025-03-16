@@ -1,21 +1,30 @@
 from flask import Flask
+from flask_cors import CORS
 from api.auth import auth_blueprint, init_mongo
 from service.unique_key_service import key_blueprint, init_mongo as init_mongo_key
+import os
 
 def create_app():
     """Initialize Flask app and configure MongoDB."""
     app = Flask(__name__)
-    app.config['MONGO_URI'] = 'mongodb://mongo:TyXclDHQbtTcXTiLpiJqvZUQRCtEFAyY@crossover.proxy.rlwy.net:15856/UserAuth'
 
-    init_mongo(app)  # ✅ Initialize MongoDB in auth.py
-    init_mongo_key(app)  # ✅ Initialize MongoDB in unique_key_service.py
+    # Use environment variables for security (Recommended)
+    app.config['MONGO_URI'] = os.getenv("MONGO_URI", "mongodb://mongo:TyXclDHQbtTcXTiLpiJqvZUQRCtEFAyY@crossover.proxy.rlwy.net:15856/UserAuth")
 
+    # Initialize MongoDB connections
+    init_mongo(app)
+    init_mongo_key(app)
+
+    # Enable CORS for API access from Flutter
+    CORS(app, resources={r"/*": {"origins": "*"}})
+
+    # Register API blueprints
     app.register_blueprint(auth_blueprint, url_prefix='/api')
     app.register_blueprint(key_blueprint, url_prefix='/api')
 
     return app
 
-app = create_app()  # ✅ Ensure `app` is initialized here
+app = create_app()  # Ensure `app` is initialized here
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000, use_reloader=False)
