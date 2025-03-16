@@ -9,7 +9,7 @@ def create_app():
     app = Flask(__name__)
 
     # Use Railway MongoDB URI from Environment Variables (More Secure)
-    app.config['MONGO_URI'] = os.getenv("MONGO_URI", "mongodb://mongo:hygtHyPGodoUuHKliWxTdMhqRfkfMbYk@ballast.proxy.rlwy.net:49150")
+    app.config['MONGO_URI'] = os.getenv("MONGO_URI", "mongodb://mongo:hygtHyPGodoUuHKliWxTdMhqRfkfMbYk@ballast.proxy.rlwy.net:49150/UserAuth")
 
     # Initialize MongoDB connections
     init_mongo(app)
