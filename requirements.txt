@@ -1,6 +1,6 @@
 Flask
-Flask-PyMongo
-Flask-Cors
-Flask-SocketIO
+PyMongo
+Cors
+SocketIO
 Werkzeug
 gunicorn
