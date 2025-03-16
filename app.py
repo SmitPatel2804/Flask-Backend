@@ -5,7 +5,7 @@ from service.unique_key_service import key_blueprint, init_mongo as init_mongo_k
 def create_app():
     """Initialize Flask app and configure MongoDB."""
     app = Flask(__name__)
-    app.config['MONGO_URI'] = 'mongodb://localhost:27017/UserAuth'
+    app.config['MONGO_URI'] = 'mongodb://mongo:TyXclDHQbtTcXTiLpiJqvZUQRCtEFAyY@crossover.proxy.rlwy.net:15856/UserAuth'
 
     init_mongo(app)  # ✅ Initialize MongoDB in auth.py
     init_mongo_key(app)  # ✅ Initialize MongoDB in unique_key_service.py
