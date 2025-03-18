@@ -1,4 +1,4 @@
 import os
 
 DEBUG = True
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://mongo:ZoBfGzdnxIwZAzKdjeaFqVdLRrUOpXXE@maglev.proxy.rlwy.net:28622")
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://mongo:JSTjDOKnIjDNohlostlaGdNjrmamKXGn@hopper.proxy.rlwy.net:10565")
