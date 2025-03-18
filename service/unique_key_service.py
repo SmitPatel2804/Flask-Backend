@@ -35,84 +35,44 @@ def generate_key():
     try:
         mongo.db.users.update_one(
             {"email": email},
-            {"$set": {"unique_key": hashed_key}, "$setOnInsert": {"connected_users": [], "pending_requests": []}},
+            {"$set": {"unique_key": hashed_key}, "$setOnInsert": {"connected_users": []}},
             upsert=True
         )
         return jsonify({"message": "Key generated successfully", "key": unique_key}), 200
     except Exception as e:
         return jsonify({"message": f"Database error: {e}"}), 500
 
-@key_blueprint.route('/request_connection', methods=['POST'])
-def request_connection():
-    """Send a connection request to another user."""
+@key_blueprint.route('/connect_users', methods=['POST'])
+def connect_users():
+    """Connect two users using their unique keys."""
     data = request.get_json()
-    sender_email = data.get("sender_email")
-    receiver_key = data.get("receiver_key")
+    user1_email = data.get("user1_email")
+    user2_key = data.get("user2_key")
 
-    if not sender_email or not receiver_key:
-        return jsonify({"message": "Both sender email and receiver key are required"}), 400
+    if not user1_email or not user2_key:
+        return jsonify({"message": "Both user email and key are required"}), 400
 
-    # Find receiver using the unique key
-    receiver = mongo.db.users.find_one({"unique_key": receiver_key})
-    if not receiver:
-        return jsonify({"message": "Invalid unique key"}), 401
-
-    receiver_email = receiver["email"]
-
-    # Check if they are already connected
-    if sender_email in receiver.get("connected_users", []):
-        return jsonify({"message": "Users are already connected"}), 200
-
-    # Add sender to receiver's pending requests
-    mongo.db.users.update_one(
-        {"email": receiver_email},
-        {"$addToSet": {"pending_requests": sender_email}}
-    )
-
-    return jsonify({"message": "Connection request sent!"}), 200
-
-@key_blueprint.route('/get_pending_requests', methods=['POST'])
-def get_pending_requests():
-    """Fetch pending connection requests for a user."""
-    data = request.get_json()
-    email = data.get("email")
-
-    if not email:
-        return jsonify({"message": "Email is required"}), 400
-
-    user = mongo.db.users.find_one({"email": email})
-    if not user:
+    user1 = mongo.db.users.find_one({"email": user1_email})
+    if not user1:
         return jsonify({"message": "User not found"}), 404
 
-    return jsonify({"pending_requests": user.get("pending_requests", [])}), 200
+    user2 = mongo.db.users.find_one({"unique_key": user2_key})
+    if not user2:
+        return jsonify({"message": "Invalid unique key"}), 401
 
-@key_blueprint.route('/approve_connection', methods=['POST'])
-def approve_connection():
-    """Approve a connection request from another user."""
-    data = request.get_json()
-    receiver_email = data.get("receiver_email")
-    sender_email = data.get("sender_email")
+    user2_email = user2["email"]
 
-    if not receiver_email or not sender_email:
-        return jsonify({"message": "Both sender and receiver email are required"}), 400
+    if user2_email in user1.get("connected_users", []):
+        return jsonify({"message": "Users are already connected"}), 200
 
-    receiver = mongo.db.users.find_one({"email": receiver_email})
-    if not receiver:
-        return jsonify({"message": "Receiver not found"}), 404
-
-    # Check if sender is in the pending requests list
-    if sender_email not in receiver.get("pending_requests", []):
-        return jsonify({"message": "No pending request from this user"}), 400
-
-    # Remove sender from receiver's pending requests and add them to the connection list
     mongo.db.users.update_one(
-        {"email": receiver_email},
-        {"$pull": {"pending_requests": sender_email}, "$push": {"connected_users": sender_email}}
+        {"email": user1_email},
+        {"$push": {"connected_users": user2_email}}
     )
 
     mongo.db.users.update_one(
-        {"email": sender_email},
-        {"$push": {"connected_users": receiver_email}}
+        {"email": user2_email},
+        {"$push": {"connected_users": user1_email}}
     )
 
-    return jsonify({"message": "Connection request approved!"}), 200
+    return jsonify({"message": "Users successfully connected!"}), 200
