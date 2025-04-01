@@ -35,44 +35,79 @@ def generate_key():
     try:
         mongo.db.users.update_one(
             {"email": email},
-            {"$set": {"unique_key": hashed_key}, "$setOnInsert": {"connected_users": []}},
+            {"$set": {"unique_key": hashed_key}, "$setOnInsert": {"connected_users": [], "pending_requests": []}},
             upsert=True
         )
         return jsonify({"message": "Key generated successfully", "key": unique_key}), 200
     except Exception as e:
         return jsonify({"message": f"Database error: {e}"}), 500
 
-@key_blueprint.route('/connect_users', methods=['POST'])
-def connect_users():
-    """Connect two users using their unique keys."""
+@key_blueprint.route('/request_connection', methods=['POST'])
+def request_connection():
+    """Send a connection request to another user."""
     data = request.get_json()
-    user1_email = data.get("user1_email")
-    user2_key = data.get("user2_key")
+    sender_email = data.get("sender_email")
+    receiver_key = data.get("receiver_key")
 
-    if not user1_email or not user2_key:
-        return jsonify({"message": "Both user email and key are required"}), 400
+    if not sender_email or not receiver_key:
+        return jsonify({"message": "Both sender email and receiver key are required"}), 400
 
-    user1 = mongo.db.users.find_one({"email": user1_email})
-    if not user1:
-        return jsonify({"message": "User not found"}), 404
-
-    user2 = mongo.db.users.find_one({"unique_key": user2_key})
-    if not user2:
+    receiver = mongo.db.users.find_one({"unique_key": receiver_key})
+    if not receiver:
         return jsonify({"message": "Invalid unique key"}), 401
 
-    user2_email = user2["email"]
+    receiver_email = receiver["email"]
 
-    if user2_email in user1.get("connected_users", []):
+    if sender_email in receiver.get("connected_users", []):
         return jsonify({"message": "Users are already connected"}), 200
 
     mongo.db.users.update_one(
-        {"email": user1_email},
-        {"$push": {"connected_users": user2_email}}
+        {"email": receiver_email},
+        {"$addToSet": {"pending_requests": sender_email}}
+    )
+
+    return jsonify({"message": "Connection request sent!"}), 200
+
+@key_blueprint.route('/get_pending_requests', methods=['POST'])
+def get_pending_requests():
+    """Fetch pending connection requests for a user."""
+    data = request.get_json()
+    email = data.get("email")
+
+    if not email:
+        return jsonify({"message": "Email is required"}), 400
+
+    user = mongo.db.users.find_one({"email": email})
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+
+    return jsonify({"pending_requests": user.get("pending_requests", [])}), 200
+
+@key_blueprint.route('/approve_connection', methods=['POST'])
+def approve_connection():
+    """Approve a connection request from another user."""
+    data = request.get_json()
+    receiver_email = data.get("receiver_email")
+    sender_email = data.get("sender_email")
+
+    if not receiver_email or not sender_email:
+        return jsonify({"message": "Both sender and receiver email are required"}), 400
+
+    receiver = mongo.db.users.find_one({"email": receiver_email})
+    if not receiver:
+        return jsonify({"message": "Receiver not found"}), 404
+
+    if sender_email not in receiver.get("pending_requests", []):
+        return jsonify({"message": "No pending request from this user"}), 400
+
+    mongo.db.users.update_one(
+        {"email": receiver_email},
+        {"$pull": {"pending_requests": sender_email}, "$push": {"connected_users": sender_email}}
     )
 
     mongo.db.users.update_one(
-        {"email": user2_email},
-        {"$push": {"connected_users": user1_email}}
+        {"email": sender_email},
+        {"$push": {"connected_users": receiver_email}}
     )
 
-    return jsonify({"message": "Users successfully connected!"}), 200
+    return jsonify({"message": "Connection request approved!"}), 200
